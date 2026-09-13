@@ -48,6 +48,15 @@ SEARCHING_ONLY_NUMERICAL = ["probes", "collision_count"]
 
 REGRESSION_TARGET = "time_taken"
 
+CLASSIFICATION_TARGET = "best_algorithm"
+CLASSIFICATION_NUMERICAL = ["input_size", "presortedness_score", "duplicate_ratio", "value_range"]
+CLASSIFICATION_CATEGORICAL = ["domain", "input_condition"]
+
+# Threshold (data-driven, see notebooks/04_classification_training.ipynb) below
+# which the margin between the best and second-best algorithm is treated as a
+# "close call" -- i.e. plausibly unstable to trial-level timing noise.
+CLOSE_CALL_MARGIN_THRESHOLD = 0.10
+
 NUMERICAL_FEATURES = COMMON_NUMERICAL + SORTING_ONLY_NUMERICAL + SEARCHING_ONLY_NUMERICAL
 CATEGORICAL_FEATURES = COMMON_CATEGORICAL
 STRUCTURAL_NUMERICAL_COLS = SORTING_ONLY_NUMERICAL + SEARCHING_ONLY_NUMERICAL
@@ -164,3 +173,97 @@ def grouped_train_test_split(X: pd.DataFrame, y: pd.Series, groups: pd.Series,
         )
 
     return X_train, X_test, y_train, y_test
+# ---------------------------------------------------------------------------
+# Classification target derivation
+# ---------------------------------------------------------------------------
+
+PROFILE_COLS = ["domain", "input_size", "input_condition"]
+
+
+def derive_profile_labels(unified_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Derive the best/second-best algorithm per unique input profile
+    (domain, input_size, input_condition), along with the absolute and
+    relative timing margin between them.
+
+    This is the classification target derivation logic: `best_algorithm`
+    does not exist as a raw column, it is computed here from measured
+    execution times, averaged across trials.
+    """
+    profile_algo_times = (
+        unified_df
+        .groupby(PROFILE_COLS + ["algorithm"])["time_taken"]
+        .mean()
+        .reset_index()
+    )
+
+    def get_best_and_second(group):
+        sorted_group = group.sort_values("time_taken")
+        best_algo = sorted_group.iloc[0]["algorithm"]
+        best_time = sorted_group.iloc[0]["time_taken"]
+        second_algo = sorted_group.iloc[1]["algorithm"] if len(sorted_group) > 1 else None
+        second_time = sorted_group.iloc[1]["time_taken"] if len(sorted_group) > 1 else None
+        return pd.Series({
+            "best_algorithm": best_algo,
+            "best_time": best_time,
+            "second_algorithm": second_algo,
+            "second_time": second_time,
+        })
+
+    profile_labels = (
+        profile_algo_times
+        .groupby(PROFILE_COLS)
+        .apply(get_best_and_second)
+        .reset_index()
+    )
+
+    profile_labels["absolute_margin"] = profile_labels["second_time"] - profile_labels["best_time"]
+    profile_labels["relative_margin"] = profile_labels["absolute_margin"] / profile_labels["best_time"]
+    profile_labels["is_close_call"] = profile_labels["relative_margin"] <= CLOSE_CALL_MARGIN_THRESHOLD
+
+    return profile_labels
+
+
+def build_classification_dataset(unified_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Build the profile-level classification dataset: one row per unique
+    input profile, with the derived `best_algorithm` label and profile-level
+    (array-property) numerical features.
+
+    Note: `algorithm` is intentionally excluded as a feature here (it would
+    leak the answer), and `collision_count`/`load_factor` are excluded since
+    they are algorithm-specific outcomes (only meaningful for hashing_search),
+    not properties of the input profile itself.
+    """
+    profile_labels = derive_profile_labels(unified_df)
+
+    profile_features = (
+        unified_df
+        .groupby(PROFILE_COLS)[["presortedness_score", "duplicate_ratio", "value_range"]]
+        .mean()
+        .reset_index()
+    )
+
+    classification_df = profile_labels[PROFILE_COLS + ["best_algorithm", "is_close_call",
+                                                          "relative_margin"]].merge(
+        profile_features, on=PROFILE_COLS, how="left"
+    )
+
+    return classification_df
+
+
+def build_classification_preprocessor() -> ColumnTransformer:
+    """ColumnTransformer for the classification feature set."""
+    return ColumnTransformer(
+        transformers=[
+            ("num", StandardScaler(), CLASSIFICATION_NUMERICAL),
+            ("cat", OneHotEncoder(handle_unknown="ignore"), CLASSIFICATION_CATEGORICAL),
+        ]
+    )
+
+
+def get_classification_feature_target(classification_df: pd.DataFrame):
+    """Return (X, y) for the classification task."""
+    X = classification_df[CLASSIFICATION_NUMERICAL + CLASSIFICATION_CATEGORICAL]
+    y = classification_df[CLASSIFICATION_TARGET]
+    return X, y

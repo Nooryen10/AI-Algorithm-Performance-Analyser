@@ -3,5 +3,4 @@ __pycache__/
 *.pyc
 data/db/*.db
 .vscode/
-# Trained ML models
-models/*.pkl
+
