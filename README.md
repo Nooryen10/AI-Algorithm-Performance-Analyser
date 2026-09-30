@@ -126,7 +126,7 @@ python -m src.complexity.theoretical_complexity
 - [x] Dataset generation (~65,000 rows)
 - [x] Data cleaning
 - [x] Theoretical complexity table
-- [ ] ML models (regression + classification)
-- [ ] Predictability-gap analysis
-- [ ] Interactive dashboard
-- [ ] Final report
+- [x] ML models (regression + classification)
+- [x] Predictability-gap analysis
+- [x] Interactive dashboard
+- [x] Final report

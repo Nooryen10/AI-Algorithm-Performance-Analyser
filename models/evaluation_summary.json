@@ -1,0 +1,31 @@
+{
+  "regression": {
+    "model": "Random Forest Regressor",
+    "hyperparameters": {
+      "n_estimators": 100,
+      "max_depth": 12,
+      "min_samples_leaf": 5
+    },
+    "r2": 0.992248916634641,
+    "mae": 0.0024188120273771025,
+    "rmse": 0.008600213707556356,
+    "test_set_size": 12948
+  },
+  "classification": {
+    "model": "Random Forest Classifier",
+    "hyperparameters": {
+      "n_estimators": 200
+    },
+    "accuracy": 0.875,
+    "f1_macro": 0.5968169049211507,
+    "f1_weighted": 0.8756853144162252,
+    "test_set_size": 400,
+    "note": "selection_sort had 0 test instances (4 total, all in train); quick_sort had 3 test instances (9 total)."
+  },
+  "dataset": {
+    "total_rows": 64780,
+    "sorting_rows": 34992,
+    "searching_rows": 29788,
+    "unique_profiles": 2000
+  }
+}
