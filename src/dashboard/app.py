@@ -840,7 +840,7 @@ recommending the best algorithm for a given input profile (classification).
 ### Repository
 
 Source code, notebooks, and models: `AI-Algorithm-Performance-Analyser` (GitHub),
-branch `feature/sudipta-ml-dashboard`.
+branch `feature/nooryen`.
         """
     )
 
