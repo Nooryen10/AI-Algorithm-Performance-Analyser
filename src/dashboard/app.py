@@ -244,6 +244,7 @@ PAGES = [
     "Performance Comparison",
     "AI Prediction",
     "Algorithm Recommendation",
+    "Personalized Prediction",
     "Model Performance",
     "Predictability Gap",
     "About / Methodology",
@@ -660,6 +661,27 @@ def render_algorithm_recommendation():
 
 
 # ---------------------------------------------------------------------------
+# Page: Personalized Prediction (additive feature -- logic lives in personalized.py)
+# ---------------------------------------------------------------------------
+
+def render_personalized_prediction():
+    from types import SimpleNamespace
+    from src.dashboard.personalized import render_personalized_page
+
+    # Hand the EXISTING loaders / predictor / theme helpers to the new page so
+    # it reuses them instead of duplicating any model or preprocessing logic.
+    ctx = SimpleNamespace(
+        predict_execution_time=predict_execution_time,
+        get_classification_model=get_classification_model,
+        sorting_algos=SORTING_ALGOS, searching_algos=SEARCHING_ALGOS,
+        clf_numerical=CLASSIFICATION_NUMERICAL, clf_categorical=CLASSIFICATION_CATEGORICAL,
+        plotly_layout=PLOTLY_LAYOUT, teal=TEAL, amber=AMBER,
+        stat_block=stat_block, callout=callout,
+    )
+    render_personalized_page(ctx)
+
+
+# ---------------------------------------------------------------------------
 # Page: Model Performance
 # ---------------------------------------------------------------------------
 
@@ -840,7 +862,7 @@ recommending the best algorithm for a given input profile (classification).
 ### Repository
 
 Source code, notebooks, and models: `AI-Algorithm-Performance-Analyser` (GitHub),
-branch `feature/sudipta-ml-dashboard`.
+branch `feature/nooryen`.
         """
     )
 
@@ -855,6 +877,7 @@ ROUTES = {
     "Performance Comparison": render_performance_comparison,
     "AI Prediction": render_ai_prediction,
     "Algorithm Recommendation": render_algorithm_recommendation,
+    "Personalized Prediction": render_personalized_prediction,
     "Model Performance": render_model_performance,
     "Predictability Gap": render_predictability_gap,
     "About / Methodology": render_about,
